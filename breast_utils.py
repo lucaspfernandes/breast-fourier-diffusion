@@ -1,42 +1,17 @@
 import torch
 import os
-from torchvision import transforms, datasets
+from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from diffusion import ScalarDiffusionModel_VariancePreserving_LinearSchedule
 import glob
 from PIL import Image
 import numpy as np
-from pydicom import dcmread
-
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 device = torch.device('cuda:0')
 img_size = 224
 batch_size = 200
-
-def get_min_max(loader):
-    # Compute the min and max of all pixels in the dataset
-    num_pixels = 0
-    mean = 0.0
-    std = 0.0
-    max_val = -np.inf
-    min_val = np.inf
-    for images in loader:
-#        batch_size, num_channels, height, width = images.shape
-#        num_pixels += batch_size * height * width
-#        mean += images.mean(axis=(0, 2, 3)).sum()
-#        std += images.std(axis=(0, 2, 3)).sum()
-        img_min = images.min()
-        img_max = images.max()
-        if img_max > max_val:
-            max_val = img_max
-        if img_min < min_val:
-            min_val = img_min
-#    mean /= num_pixels
-#    std /= num_pixels
-#    return mean, std
-    return max_val, min_val
-
+train_dir = '../cropped_data_train'
 
 class BreastDataset(Dataset):
     def __init__(self, root_dir, transform=None) -> None:
@@ -66,22 +41,10 @@ class BreastDataset(Dataset):
 
         return img   
 
-#transform_list_norm = transforms.Compose([transforms.ToTensor(),
-#                                          transforms.CenterCrop((728,728)),
-#                                          transforms.Resize((img_size, img_size), antialias=None)])
-#breast_norm_dataset = BreastDataset(root_dir='../data/data_tcc', transform=transform_list_norm)
-#breast_norm_loader = DataLoader(breast_norm_dataset, batch_size=32, shuffle=True)
-## breast_mean, breast_std = get_mean_std(breast_norm_loader)
-#breast_max, breast_min = get_min_max(breast_norm_loader)
-
-
 transform_list = transforms.Compose([transforms.ToTensor(),
-#                                    transforms.CenterCrop((728,728)),
-#                                    transforms.Resize((img_size, img_size), antialias=None),
-#                                    transforms.Lambda(lambda x: torch.clamp(x, min=600, max=8200)),
-                                    transforms.Normalize(mean=0, std=16383),
+                                    transforms.Normalize(mean=0, std=16383), #normalize 14bits
                                     transforms.Normalize(mean=0.5, std=0.5)])
-breast_dataset = BreastDataset(root_dir='../cropped_data_train', transform=transform_list)
+breast_dataset = BreastDataset(root_dir=train_dir, transform=transform_list)
 breast_train_loader = DataLoader(breast_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
 
@@ -125,12 +88,10 @@ class UNet(torch.nn.Module):
         self.pool6 = torch.nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv7 = ConvolutionalBlock(num_base_filters*4, num_base_filters*8) #256
         self.pool8 = torch.nn.MaxPool2d(kernel_size=2, stride=2)
+
         # bottleneck
         self.conv9 = ConvolutionalBlock(num_base_filters*8, num_base_filters*16) #512
-#        self.flatten6 = torch.nn.Flatten()
-#        self.fc7 = FullyConnectedBlock((self.image_size//4)*(self.image_size//4)*num_base_filters*4, 1024)
-#        self.fc8 = FullyConnectedBlock(1024, (self.image_size//4)*(self.image_size//4)*num_base_filters*4)
-#        self.unflatten9 = torch.nn.Unflatten(1, (num_base_filters*4, self.image_size//4, self.image_size//4))
+
         # decoder
         self.upconv10 = torch.nn.ConvTranspose2d(num_base_filters*16, num_base_filters*8, kernel_size=2, stride=2)
         self.conv11 = ConvolutionalBlock(num_base_filters*16, num_base_filters*8)
@@ -152,10 +113,6 @@ class UNet(torch.nn.Module):
         x7 = self.conv7(x6) #skip
         x8 = self.pool8(x7)
         x9 = self.conv9(x8)
-  #      x6 = self.flatten6(x5)
-  #      x7 = self.fc7(x6)
-  #      x8 = self.fc8(x7)
-  #      x9 = self.unflatten9(x8)
         x10 = self.upconv10(x9)
         x11 = self.conv11(torch.cat((x10, x7), dim=1))
         x12 = self.upconv12(x11)
@@ -165,7 +122,6 @@ class UNet(torch.nn.Module):
         x16 = self.upconv16(x15)
         x17 = self.conv17(torch.cat((x16, x1), dim=1))
         x18 = self.conv18(x17)
-#        x18 = torch.sigmoid(self.conv18(x17)) #[0,1]
         return x18
 
 

@@ -7,12 +7,11 @@ from tqdm import tqdm
 import sys
 from PIL import Image
 import numpy as np
-from pydicom import dcmread
 import imageio
 
 np.random.seed(42)
 
-device = torch.device('cuda:0')
+device = torch.device('cuda:0') #select your device
 
 # --------------------------
 # define parameters
@@ -78,50 +77,6 @@ if __name__ == '__main__':
             returnFullProcess=False,
             verbose=False
         )
-#         observe_every = 200
-#         image_filenames = []
-#         image_names = []
-#         for img_idx, img_tensor in enumerate(x_t_all_batch):  
-#             if img_idx % observe_every == 0 or img_idx == 8191:
-#                 ###
-# #                cur_img = img_tensor.squeeze(0).cpu().numpy()
-#                 cur_img = img_tensor.cpu().numpy().squeeze(0).squeeze(0)
-#                 img_min = cur_img.min()
-#                 img_max = cur_img.max()
-#                 cur_img = (cur_img - img_min) / (img_max - img_min)  # Normalize to [0, 1]
-#                 cur_img = cur_img * 16122.4727  # Scale based on the max value in training
-#                 cur_img = cur_img.astype(np.int16)
-#                 cur_img_pil = Image.fromarray(cur_img, mode='I;16')
-#                 img_name = f'{save_path}/gen_scalar_{start_idx + img_idx}.tiff'
-#                 cur_img_pil.save(img_name)
-#                 print(f'Saved image gen_scalar_{start_idx + img_idx}.tiff')
-#                 image_names.append(img_name)
-                
-#                 # Generate and save the histogram for the current iteration
-#                 plt.figure(figsize=(10, 4))
-#                 hist_aux = img_tensor.cpu().ravel()
-#                 plt.hist(hist_aux, bins=50, color='blue', alpha=0.7)
-#                 plt.title(f'Histogram at Iteration {img_idx}')
-#                 plt.xlabel('Pixel Value')
-#                 plt.ylabel('Frequency')
-#                 plt.xlim([-4, 4])
-#                 plt.grid(True)
-
-#                 # Save the plot as an image file
-#                 filename = f'{save_path}scalar_hist_{img_idx:04d}.png'
-#                 plt.savefig(filename)
-#                 plt.close()  # Close the figure to free memory
-#                 image_filenames.append(filename)
-
-#         # After all iterations, create a GIF
-#         with imageio.get_writer(f'{save_path}histograms.gif', mode='I') as writer:
-#             for filename in image_filenames:
-#                 image = imageio.imread(filename)
-#                 writer.append_data(image)
-#         with imageio.get_writer(f'{save_path}image_histograms.gif', mode='I') as writer:
-#             for img in image_names:
-#                 image = imageio.imread(img)
-#                 writer.append_data(image)
         
         # Process and save each image in the current batch
         for img_idx, img_tensor in enumerate(x_t_all_batch):

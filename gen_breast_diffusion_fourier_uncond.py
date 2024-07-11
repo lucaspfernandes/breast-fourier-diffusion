@@ -8,7 +8,7 @@ from PIL import Image
 import numpy as np
 from tqdm import tqdm
 
-device = torch.device('cuda')
+device = torch.device('cuda:0') #select your device
 
 np.random.seed(42)
 
@@ -58,6 +58,7 @@ if __name__ == '__main__':
         y = torch.abs(y)
         return y
     
+    #here you can set the filter parametrization size in mm (equations 25, 26 and 27)
     fourier_transfer_function_LPF = gaussian_blur_fourier_transfer_function(3.0, img_shape)
     fourier_transfer_function_BPF = gaussian_blur_fourier_transfer_function(1.0, img_shape) - fourier_transfer_function_LPF
     fourier_transfer_function_HPF = torch.ones(img_shape, img_shape).to(device) - fourier_transfer_function_BPF - fourier_transfer_function_LPF

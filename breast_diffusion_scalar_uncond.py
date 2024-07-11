@@ -8,20 +8,25 @@ from tqdm import tqdm
 import pandas as pd
 import sys
 
-device = torch.device('cuda:0')
+device = torch.device('cuda:0') #select your device
 
 # --------------------------
 # define parameters
 # --------------------------
 verbose=True
 loadPreviousWeights=False
-runTraining=True
+runTraining=True #check train_dir in breast_utils
 runTesting=False
 n_epochs = 500
 runReverseProcess=True
 save_interval = 10
 plot_interval = 5
 img_shape = 224
+#set batch_size on breast_utils.py !!!!
+
+previous_checkpoint_path = './data/weights/diffusion_scalar_unconditional.pt'
+animations_path = './data/animations_train'
+model_path = './data/weights'
 # --------------------------
 
 if __name__ == '__main__':
@@ -55,9 +60,9 @@ if __name__ == '__main__':
 
 
     if loadPreviousWeights:
-        if os.path.exists('./data/weights/diffusion_scalar.pt'):
-            diffusion_model.load_state_dict(torch.load('./data/weights/diffusion_scalar.pt'))
-            print('Loaded weights from ./data/weights/diffusion_scalar.pt')
+        if os.path.exists(previous_checkpoint_path):
+            diffusion_model.load_state_dict(torch.load(previous_checkpoint_path))
+            print(f'Loaded weights from {previous_checkpoint_path}')
 
     optimizer = torch.optim.Adam(diffusion_model.parameters(), lr=1e-3)
     
@@ -67,7 +72,6 @@ if __name__ == '__main__':
         # run the training loop
         if runTraining:
             for i, x_0_batch in enumerate(breast_train_loader):
-#            for i, (x_0_batch, _) in enumerate(mnist_train_loader):
                 optimizer.zero_grad()
                 x_0_batch = x_0_batch.to(device)
                 loss = diffusion_model.compute_loss(x_0_batch, loss_name='elbo')
@@ -119,19 +123,19 @@ if __name__ == '__main__':
             
             ani = FuncAnimation(fig, updatefig, frames=range(64), interval=50, blit=True)
             
-            ani.save(f'./data/animations_train/diffusion_scalar_unconditional_{epoch}.gif')
+            ani.save(f'{animations_path}/diffusion_scalar_unconditional_{epoch}.gif')
         if epoch % save_interval == 0:
-            torch.save(diffusion_model.state_dict(), f'./data/weights/diffusion_scalar_unconditional_{epoch}.pt')
+            torch.save(diffusion_model.state_dict(), f'{model_path}/diffusion_scalar_unconditional_{epoch}.pt')
         sys.stdout.flush()
         
-    # Cria um DataFrame com os valores
+    # create a dataframe with loss values
     loss_per_epoch = pd.DataFrame({
         'epoch': epoch_list,
         'Loss': loss_list})
 
-    # Salva o DataFrame em um arquivo CSV
-    caminho_arquivo = './data/weights/loss_per_epoch.csv'  
-    loss_per_epoch.to_csv(caminho_arquivo, index=False)
+    # save dataframe as csv
+    loss_path = f'{model_path}/loss_per_epoch.csv' 
+    loss_per_epoch.to_csv(loss_path, index=False)
     plt.figure(figsize=(10, 6))
     plt.plot(epoch_list, loss_list, linestyle='-', color='blue')
     plt.title('Loss per epoch')
@@ -140,8 +144,8 @@ if __name__ == '__main__':
     plt.grid(True)
 #    plt.xticks(epoch_list)
     plt.tight_layout()
-    # Salvar o gráfico como um arquivo PNG
-    plt.savefig('./data/weights/loss_per_epoch.png')
+    # save ploto as png
+    plt.savefig(f'{model_path}/loss_per_epoch.png')
 
 
         
